@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "build": "npx @tailwindcss/cli -i ./src/css/input.css -o ./src/css/output.css --watch"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.18",
+    "firebase": "^12.8.0",
+    "flyonui": "^2.4.1",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@iconify/json": "^2.2.430",
+    "@iconify/tailwind4": "^1.2.1"
+  }
+}

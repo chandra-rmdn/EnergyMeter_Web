@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="./src/css/output.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rock+Salt&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <title>Tor Monitor Ketuwak</title>
+    <style>
+      html,
+      body {
+        background: #ffffff !important;
+      }
+
+      .font-permanent-marker {
+        font-family: 'Permanent Marker', cursive;
+      }
+      .font-rock-salt {
+        font-family: 'Rock Salt', cursive;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status-badge {
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .connected {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .disconnected {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      /* MAIN LAYOUT */
+      .main-container {
+        display: flex;
+        height: calc(100vh - 70px);
+      }
+
+      /* SIDEBAR */
+      .sidebar {
+        width: 350px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .device-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s;
+      }
+
+      .device-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      /* MAP */
+      .map-container {
+        flex: 1;
+        position: relative;
+      }
+
+      #mapid {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* STATS */
+      .stats-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 5px 0;
+      }
+
+      /* STATUS COLORS */
+      .online {
+        color: #10b981;
+      }
+      .offline {
+        color: #6b7280;
+      }
+      .matot {
+        color: #ef4444;
+      }
+
+      .badge-online {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-offline {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .badge-matot {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      /* Tambah di style tag atau file CSS */
+      #scoped-sidebar-backdrop {
+        display: none !important; /* Sembunyikan backdrop */
+      }
+
+      /* Atau buat transparan dan non-interactive */
+      #scoped-sidebar-backdrop.transparent-backdrop {
+        background-color: transparent !important;
+        pointer-events: none !important;
+      }
+    </style>
+  </head>
+  <body class="w-screen h-screen">
+    <header class="navbar bg-white p-4 md:pe-10 shadow-base-300/20 shadow-sm z-50 sticky top-0">
+      <div class="w-full md:flex md:items-center md:gap-2">
+        <div class="flex items-center justify-between w-full gap-2">
+          <div class="navbar-start items-center justify-between max-md:w-full">
+            <a href="#" class="flex items-center gap-2" aria-label="Homepage Link">
+              <div class="bg-blue-600 p-2 rounded-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                  <path
+                    fill="none"
+                    stroke="white"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 12h-2.962c-.21 0-.316 0-.405.042a.5.5 0 0 0-.201.173c-.061.088-.092.205-.155.44l-1.817 6.846c-.233.875-.349 1.313-.524 1.426a.435.435 0 0 1-.485-.002c-.175-.115-.288-.554-.514-1.43l-3.873-14.99c-.227-.876-.34-1.315-.515-1.43a.435.435 0 0 0-.485-.002c-.175.113-.291.55-.524 1.426l-1.817 6.845c-.063.236-.094.353-.154.44a.5.5 0 0 1-.202.174C6.278 12 6.173 12 5.962 12H3"
+                  />
+                </svg>
+              </div>
+              <div class="items-center">
+                <h1 class="font-semibold text-gray-900">ESP Monitor</h1>
+                <h1 class="font-rock-salt text-[10px] text-gray-900 block md:hidden"><span class="font-extrabold">E</span>l Sc<span class="font-extrabold text-[9px]">A</span>mmer</h1>
+                <p class="text-xs text-gray-500 hidden md:block">Real-time Device Tracking</p>
+              </div>
+            </a>
+          </div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-rock-salt text-md text-gray-900 hidden sm:block"><span class="font-extrabold">E</span>l Sc<span class="font-extrabold text-sm">A</span>mmer</h1>
+          </div>
+          <div class="md:hidden">
+            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-sm btn-square" data-collapse="#scoped-sidebar" aria-controls="scoped-sidebar" aria-label="Toggle navigation">
+              <span class="icon-[tabler--menu-2] collapse-open:hidden size-4"></span>
+              <span class="icon-[tabler--x] collapse-open:block hidden size-4"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <aside
+      id="scoped-sidebar"
+      class="bg-gray-50 px-0 overlay z-50 border-r [--auto-close:sm] sm:shadow-none overlay-open:translate-x-0 drawer drawer-body hidden w-full max-h-80 md:max-w-85 md:max-h-[89.5vh] sm:absolute sm:z-40 sm:flex sm:translate-x-0"
+      role="dialog"
+      tabindex="-1"
+    >
+      <div class="w-full p-4 bg-white border-b border-gray-300">
+        <div class="hidden sm:flex input bg-white text-black flex max-w-sm space-x-2 border border-gray-400 rounded-xl focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100 focus-within:outline-none">
+          <span class="icon-[tabler--search] text-gray-400 my-auto size-4 shrink-0"></span>
+          <input type="search" class="grow text-sm" placeholder="Cari ESP..." id="kbdInput" />
+        </div>
+        <div class="flex items-center md:mt-3 gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="18" viewBox="0 0 16 16">
+            <path
+              fill="#4a4a4a"
+              fill-rule="evenodd"
+              d="m9.759 12.652l-1.8 2.25l-.78-.625l1.8-2.25A.1.1 0 0 0 9 11.965V8.362a1 1 0 0 1 .232-.64l4.631-5.558A.1.1 0 0 0 13.787 2H2.213a.1.1 0 0 0-.077.164l4.631 5.558a1 1 0 0 1 .232.64v5.853a.1.1 0 0 0 .178.062l.781.625c-.65.812-1.959.353-1.959-.687V8.362L1.368 2.804C.771 2.088 1.281 1 2.214 1h11.573c.932 0 1.442 1.088.845 1.804L10 8.362v3.603a1.1 1.1 0 0 1-.241.687"
+            />
+          </svg>
+          <select
+            class="select text-sm bg-white text-black max-w-sm rounded-xl border border-gray-400 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100 focus-within:outline-none appearance-none"
+            aria-label="select"
+            id="status-filter"
+          >
+            <option value="all">Semua Status</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+            <option value="matot">Matot</option>
+          </select>
+        </div>
+      </div>
+      <div class="drawer-body text-black p-4">
+        <div id="esp-list"></div>
+        <!-- card-navbar -->
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col md:ms-85 overflow-hidden h-[89.5vh]">
+      <div class="bg-white border-b border-gray-300 md:max-h-[121.1px] p-4">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Total ESP</p>
+                <p id="total-count" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div class="p-3 rounded-lg bg-blue-50 text-blue-600 blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 512 512">
+                  <rect width="352" height="352" x="80" y="80" fill="none" stroke="oklch(0.546 0.245 262.881)" stroke-linejoin="round" stroke-width="34" rx="48" ry="48" />
+                  <rect width="190" height="190" x="158" y="158" fill="none" stroke="oklch(0.546 0.245 262.881)" stroke-linejoin="round" stroke-width="34" rx="16" ry="16" />
+                  <path
+                    fill="none"
+                    stroke="oklch(0.546 0.245 262.881)"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="36"
+                    d="M256 80V48m80 32V48M176 80V48m80 416v-32m80 32v-32m-160 32v-32m256-176h32m-32 80h32m-32-160h32M48 256h32m-32 80h32M48 176h32"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Online</p>
+                <p id="online-count" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div class="p-3 rounded-lg bg-green-50 text-green-600 green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                  <path fill="none" stroke="green" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 19.51l.01-.011M2 8c6-4.5 14-4.5 20 0M5 12c4-3 10-3 14 0M8.5 15.5c2.25-1.4 4.75-1.4 7 0" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Offline</p>
+                <p id="offline-count" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div class="p-3 rounded-lg bg-gray-50 text-gray-600 gray">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                  <path
+                    fill="none"
+                    stroke="gray"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 20h.01M8.5 16.429a5 5 0 0 1 7 0M5 12.859a10 10 0 0 1 5.17-2.69m8.83 2.69a10 10 0 0 0-2.007-1.523M2 8.82a15 15 0 0 1 4.177-2.643M22 8.82a15 15 0 0 0-11.288-3.764M2 2l20 20"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Matot</p>
+                <p id="matot-count" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              <div class="p-3 rounded-lg bg-red-50 text-red-600 red">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                  <g fill="none" stroke="red" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+                    <path d="m13.242 9.8l-3.725 3.725h4.966l-3.725 3.725" />
+                    <path d="M10.367 4.462L2.752 17.655a1.885 1.885 0 0 0 1.634 2.827h15.228a1.885 1.885 0 0 0 1.633-2.827L13.633 4.462a1.885 1.885 0 0 0-3.266 0" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-hidden relative">
+        <div id="mapid" class="absolute inset-0 w-full border border-gray-300 z-10"></div>
+      </div>
+    </main>
+  </body>
+  <script src="./node_modules/flyonui/flyonui.js"></script>
+  <script type="module" src="./src/js/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</html>
